@@ -33,7 +33,7 @@ namespace Library.Models
 
         public override string? ToString()
         {
-            return $"{Id} : {LastName} {FirstName} ({Email}, {Phone})";
+            return $"({Id}) {LastName} {FirstName}";
         }
     }
 }

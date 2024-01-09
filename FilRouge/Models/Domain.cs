@@ -13,7 +13,10 @@ namespace Library.Models
         public string Description { get; set; }
         public List<Book> Books { get; set; }
 
-        public Domain() {}
+        public Domain() 
+        {
+            Books = new List<Book>();
+        }
 
         public Domain(string name, string description)
         {
@@ -24,7 +27,7 @@ namespace Library.Models
 
         public override string? ToString()
         {
-            return $"{Name} : {Description}";
+            return $"{Id} - {Name} : {Description}";
         }
     }
 }

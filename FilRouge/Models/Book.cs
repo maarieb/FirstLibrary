@@ -38,7 +38,7 @@ namespace Library.Models
 
         public override string? ToString()
         {
-            return $"{Title} : {Description} - {State}";
+            return $"{Title}: {Description}, de {Writer}, Statut: {State}";
         }
     }
 }

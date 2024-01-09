@@ -16,7 +16,10 @@ namespace Library.Models
         public string Country { get; set; }
         public List<Reader> Readers { get; set; }
 
-        public Address() {}
+        public Address() 
+        {
+            Readers = new List<Reader>();
+        }
 
         public Address(string apartment, string street, string city, string zipCode, string country)
         {

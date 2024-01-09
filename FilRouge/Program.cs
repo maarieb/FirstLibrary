@@ -69,11 +69,8 @@ void SaveBook()
         {
             context.Books.Add(book);
             book.Writer = SaveWriter(book);
-            if(book.Writer == null)
-            {
-                book.Writer = SaveWriter(book);
-            }
             book.Domain = SaveDomain(book);
+            context.SaveChanges();
         }
         Console.WriteLine("Le livre a bien été enregistré !");
     } else
@@ -102,6 +99,8 @@ Writer SaveWriter(Book book)
 {
     using (ApplicationContext context = new ApplicationContext())
     {
+        Console.WriteLine();
+        Console.WriteLine("Les auteurs déjà existants :");
         context.Persons
             .OfType<Writer>().ToList().ForEach(Console.WriteLine);
         Console.WriteLine();
@@ -110,18 +109,59 @@ Writer SaveWriter(Book book)
         Console.WriteLine();
         Console.WriteLine("ENTRER VOTRE CHOIX");
         var choix = int.Parse(Console.ReadLine());
+
         switch (choix)
         {
             case 1:
+                Console.WriteLine();
                 Console.WriteLine("Saisir l'identifiant :");
                 int id = int.Parse(Console.ReadLine());
                 return SelectWriter(id, book);
             case 2:
+                Console.WriteLine();
                 Console.WriteLine("Entrer le nom de l'auteur :");
                 string name = Console.ReadLine();
+                Console.WriteLine();
                 Console.WriteLine("Entrer le prénom de l'auteur :");
                 string firstName = Console.ReadLine();
+                Console.WriteLine();
                 return CreateWriter(name, firstName, book);
+            default:
+                Console.WriteLine("Vous n'avez pas entré un numéro valide");
+                return null;
+        }
+    }
+}
+
+Domain SaveDomain(Book book)
+{
+    using (ApplicationContext context = new ApplicationContext())
+    {
+        context.Domains
+            .ToList().ForEach(Console.WriteLine);
+        Console.WriteLine();
+        Console.WriteLine("1 - Sélectionner l'identifiant du domaine");
+        Console.WriteLine("2 - Enregistrer un nouveau domaine");
+        Console.WriteLine();
+        Console.WriteLine("ENTRER VOTRE CHOIX");
+        var choix = int.Parse(Console.ReadLine());
+
+        switch (choix)
+        {
+            case 1:
+                Console.WriteLine();
+                Console.WriteLine("Saisir l'identifiant :");
+                int id = int.Parse(Console.ReadLine());
+                return SelectDomain(id, book);
+            case 2:
+                Console.WriteLine();
+                Console.WriteLine("Entrer le nom du domaine :");
+                string name = Console.ReadLine();
+                Console.WriteLine();
+                Console.WriteLine("Entrer la description :");
+                string description = Console.ReadLine();
+                Console.WriteLine();
+                return CreateDomain(name, description, book);
             default:
                 Console.WriteLine("Vous n'avez pas entré un numéro valide");
                 return null;
@@ -136,8 +176,19 @@ Writer SelectWriter(int id, Book book)
         Writer? writer = context.Persons
             .OfType<Writer>().ToList().Find(w => w.Id == id);
         writer.Books.Add(book);
-        context.SaveChanges();
         return writer;
+    }
+}
+
+Domain SelectDomain(int id, Book book)
+{
+    using (ApplicationContext context = new ApplicationContext())
+    {
+        Domain? domain = context.Domains
+            .ToList()
+            .Find(w => w.Id == id);
+        domain.Books.Add(book);
+        return domain;
     }
 }
 
@@ -150,59 +201,31 @@ Writer CreateWriter(string name, string firstName, Book book)
         newWriter.LastName = name;
         newWriter.Books.Add(book);
         context.Persons.Add(newWriter);
-        context.SaveChanges();
         return newWriter;
     }   
 }
 
-Domain SaveDomain(Book book)
+Domain CreateDomain(string name, string description, Book book)
 {
     using (ApplicationContext context = new ApplicationContext())
     {
-        Console.WriteLine("Entrer le nom du domaine");
-        var name = Console.ReadLine();
-
-        Domain domain = context.Domains.FirstOrDefault(w => w.Name.Equals(name));
-        if (domain != null)
-        {
-            if (domain.Books.IsNullOrEmpty())
-            {
-                domain.Books = new List<Book>() { book };
-            } else
-            {
-                domain.Books.Add(book);
-            }
-            context.SaveChanges();
-            return domain;
-        }
-        else
-        {
-            Domain newDomain = CreateDomain(name);
-            context.Domains.Add(newDomain);
-            context.SaveChanges();
-            return newDomain;
-        }
+        Domain newDomain = new Domain();
+        newDomain.Name = name;
+        newDomain.Description = description;
+        newDomain.Books.Add(book);
+        context.Domains.Add(newDomain);
+        return newDomain;
     }
-}
-
-Domain CreateDomain(string name)
-{
-    Console.WriteLine("Entrer une description du domaine");
-    string description = Console.ReadLine();
-
-    Domain newDomain = new Domain();
-    newDomain.Name = name;
-    newDomain.Description = description;
-    newDomain.Books = new List<Book>();
-    return newDomain;
 }
 
 void FindBook()
 {
+    Console.WriteLine();
     Console.WriteLine("RECHERCHER UN LIVRE");
     Console.WriteLine("1 - Par son identifiant");
     Console.WriteLine("2 - Par son titre");
     int choix = int.Parse(Console.ReadLine());
+    Console.WriteLine();
 
     switch (choix)
     {
@@ -210,6 +233,7 @@ void FindBook()
             Console.WriteLine("RECHERCHER UN LIVRE PAR SON IDENTIFIANT");
             Console.WriteLine("Entrer l'identifiant");
             int id = int.Parse(Console.ReadLine());
+            Console.WriteLine();
             Console.WriteLine(FindBookById(id));
             Console.WriteLine();
             break;
@@ -217,6 +241,7 @@ void FindBook()
             Console.WriteLine("RECHERCHER UN LIVRE PAR SON TITRE");
             Console.WriteLine("Entrer le titre à rechercher");
             string search = Console.ReadLine();
+            Console.WriteLine();
             FindBookByTitle(search);
             Console.WriteLine();
             break;
@@ -232,7 +257,7 @@ Book FindBookById(int id)
 {
     using (ApplicationContext context = new ApplicationContext())
     {
-        Book? book = context.Books.Find(id);
+        Book? book = context.Books.Include(b => b.Writer).FirstOrDefault(b => b.Id == id);
         if (book != null)
         {
             return book;
@@ -249,6 +274,7 @@ void FindBookByTitle(string search)
     using (ApplicationContext context = new ApplicationContext())
     {
         var books = context.Books
+            .Include(b => b.Writer)
             .Where(b => b.Title.Equals(search) || b.Title.Contains(search))
             .ToList();
 
@@ -263,27 +289,33 @@ void FindBookByTitle(string search)
     }
 }
 
-
 void SaveLoan()
 {
+    Console.WriteLine();
     Console.WriteLine("ENREGISTRER UN EMPRUNT");
     Console.WriteLine("Entrer l'identifiant du livre emprunté");
     int bookId = int.Parse(Console.ReadLine());
+    Console.WriteLine();
     Console.WriteLine("Entrer l'identifiant de l'emprunteur");
     int readerId = int.Parse(Console.ReadLine());
+    Console.WriteLine();
 
     using (ApplicationContext context = new ApplicationContext())
     {
         Book book = FindBookById(bookId);
         Reader reader = context.Persons.OfType<Reader>().First(r => r.Id == readerId);
-        if (book != null && reader != null)
+        if (book != null && reader != null && IsPermitted(reader))
         {
             if (IsAvailable(book))
             {
-                book.State = Library.Enums.EBookState.EMPRUNTE;
+                book.State = EBookState.EMPRUNTE;
                 Loan loan = new Loan();
                 context.Loans.Add(loan);
-                CreateLoan(loan, reader, book);
+                context.SaveChanges();
+                loan.Reader = reader;
+                loan.Book = book;
+                loan.StartDate = DateTime.Now;
+                context.SaveChanges();
                 book.Loans.Add(loan);
                 reader.Loans.Add(loan);
                 context.SaveChanges();
@@ -299,12 +331,14 @@ void SaveLoan()
     }
 }
 
-void CreateLoan(Loan loan, Reader reader, Book book)
-{
-    loan.Book = book;
-    loan.Reader = reader;
-    loan.StartDate = DateTime.Now;
-}
+//Loan CreateLoan(Reader reader, Book book)
+//{
+//    Loan loan = new Loan();
+//    loan.Book = book;
+//    loan.Reader = reader;
+//    loan.StartDate = DateTime.Now;
+//    return loan;
+//}
 
 bool IsAvailable(Book book){
     if(book.State == EBookState.DISPONIBLE) 
@@ -314,8 +348,18 @@ bool IsAvailable(Book book){
     return false;
 }
 
+bool IsPermitted(Reader reader)
+{
+    if (reader.Loans.Count() > 3)
+    {
+        return false;
+    }
+    return true;
+}
+
 void EndLoan()
 {
+    Console.WriteLine();
     Console.WriteLine("ENREGISTRER UN RETOUR");
     Console.WriteLine("Entrer l'identifiant de l'emprunt");
     int loanId = int.Parse(Console.ReadLine());
@@ -342,11 +386,16 @@ ManageUserSelection();
 
 //using (ApplicationContext context = new ApplicationContext())
 //{
-//    Reader reader = new Reader("Pamures", "Pomme", "pamures@gmail.com", "0652364789", "pomme3000");
-//    Address address = new Address("", "16 Rue des Fruits", "Versailles", "78000", "France");
-//    reader.Address = address;
-//    address.Readers.Add(reader);
+//    Reader reader = new Reader("Lafrite", "Patrick", "plafrite@gmail.com", "0658341789", "patrick3000");
+//    Address address = new Address("115", "31 Avenue des Patatas", "Guyancourt", "78280", "France");
 //    context.Persons.Add(reader);
 //    context.Addresses.Add(address);
+//    //Reader? reader = context.Persons.OfType<Reader>().FirstOrDefault(r => r.Id == 60);
+//    //reader.Loans.ForEach(Console.WriteLine);
 //    context.SaveChanges();
+//    reader.Address = address;
+//    address.Readers.Add(reader);
+//    context.SaveChanges();
+//    address.Readers.ForEach(Console.WriteLine);
 //}
+
